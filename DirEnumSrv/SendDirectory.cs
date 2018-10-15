@@ -39,18 +39,26 @@ namespace DirEnumSrv
         }
         private static void BuildSendData(ref FIND_DATA_RAW find_data, BinaryWriter bw)
         {
-            //bw.Write(find_data.data, 0, 36);
+            int lenFilename = LenOfFilename(find_data.cFileName);
 
-            StringBuilder sb = new StringBuilder();
-            int i = 0;
-            while ( find_data.cFileName[i] != 0 )
+            byte[] UTF8Filename = new byte[260 * 4];
+            int UTF8byteswritten = 0;
+
+            unsafe
             {
-                sb.Append((char)find_data.cFileName[i]);
-                ++i;
+                fixed (UInt16* ptrFilename = find_data.cFileName)
+                fixed (byte* utf8buffer = UTF8Filename)
+                {
+                    char* chars = (char*)ptrFilename;
+                    UTF8byteswritten = Encoding.UTF8.GetBytes(
+                        chars:      chars, 
+                        charCount:  lenFilename, 
+                        bytes:      utf8buffer, 
+                        byteCount:  UTF8Filename.Length);
+                }
             }
 
-            byte[] Utf8Filename = Encoding.UTF8.GetBytes(sb.ToString());
-            bw.Write(Utf8Filename, 0, Utf8Filename.Length);
+            bw.Write(UTF8Filename, 0, UTF8byteswritten);
             bw.Write((byte)0);
         }
         private static int LenOfFilename(UInt16[] szFilename)
