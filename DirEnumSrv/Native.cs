@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Microsoft.Win32.SafeHandles;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -58,18 +60,16 @@ namespace Spi
     {
         public readonly UInt32 dwFileAttributes;
 
-        UInt32 ftCreateLow;
-        UInt32 ftCreateHigh;
-        UInt32 ftAccessLow;
-        UInt32 ftAccessHigh;
-        UInt32 ftWriteLow;
-        UInt32 ftWriteHigh;
-
-        UInt32 nFileSizeHigh;
-        UInt32 nFileSizeLow;
-
-        UInt32 dwReserved0;
-        UInt32 dwReserved1;
+        public readonly UInt32 ftCreateLow;
+        public readonly UInt32 ftCreateHigh;
+        public readonly UInt32 ftAccessLow;
+        public readonly UInt32 ftAccessHigh;
+        public readonly UInt32 ftWriteLow;
+        public readonly UInt32 ftWriteHigh;
+        public readonly UInt32 nFileSizeHigh;
+        public readonly UInt32 nFileSizeLow;
+        public readonly UInt32 dwReserved0;
+        public readonly UInt32 dwReserved1;
 
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 260)]
         public UInt16[] cFileName;
@@ -87,6 +87,7 @@ namespace Spi
         public const int ERROR_INVALID_PARAMETER = 0x00000057;
         public const int ERROR_DIRECTORY = 0x10B; // The directory name is invalid.
         public const int ERROR_NO_MORE_FILES = 0x12; // There are no more files.
+        public const int FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
 
         [System.Security.SuppressUnmanagedCodeSecurity]
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -125,6 +126,88 @@ namespace Spi
             FIND_FIRST_EX_LARGE_FETCH = 2,
             FIND_FIRST_EX_ON_DISK_ENTRIES_ONLY = 4
         }
+        //
+        // GetFileInformationByHandleEx()
+        //
+        public enum FILE_INFO_BY_HANDLE_CLASS : int
+        {
+            FileBasicInfo = 0,
+            FileStandardInfo = 1,
+            FileNameInfo = 2,
+            FileRenameInfo = 3,
+            FileDispositionInfo = 4,
+            FileAllocationInfo = 5,
+            FileEndOfFileInfo = 6,
+            FileStreamInfo = 7,
+            FileCompressionInfo = 8,
+            FileAttributeTagInfo = 9,
+            FileIdBothDirectoryInfo = 10,// 0x0A
+            FileIdBothDirectoryRestartInfo = 11, // 0xB
+            FileIoPriorityHintInfo = 12, // 0xC
+            FileRemoteProtocolInfo = 13, // 0xD
+            FileFullDirectoryInfo = 14, // 0xE
+            FileFullDirectoryRestartInfo = 15, // 0xF
+            FileStorageInfo = 16, // 0x10
+            FileAlignmentInfo = 17, // 0x11
+            FileIdInfo = 18, // 0x12
+            FileIdExtdDirectoryInfo = 19, // 0x13
+            FileIdExtdDirectoryRestartInfo = 20, // 0x14
+            MaximumFileInfoByHandlesClass
+        }
 
+        [System.Security.SuppressUnmanagedCodeSecurity]
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool GetFileInformationByHandleEx(
+                    IntPtr                      hFile
+            ,       FILE_INFO_BY_HANDLE_CLASS   infoClass
+            ,   ref byte[]                      buffer
+            ,       UInt32                      dwBufferSize);
+
+        [System.Security.SuppressUnmanagedCodeSecurity]
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static unsafe extern bool GetFileInformationByHandleEx(
+            IntPtr hFile
+            , FILE_INFO_BY_HANDLE_CLASS infoClass
+            , byte* buffer
+            , UInt32 dwBufferSize);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct FILE_FULL_DIR_INFO
+        {
+            public uint NextEntryOffset;
+            public uint FileIndex;
+            public long CreationTime;
+            public long LastAccessTime;
+            public long LastWriteTime;
+            public long ChangeTime;
+            public long EndOfFile;
+            public long AllocationSize;
+            public uint FileAttributes;
+            public uint FileNameLength;
+            public uint EaSize;
+            public UInt16 FileName;
+        }
+
+            //
+            //
+            //
+            [System.Security.SuppressUnmanagedCodeSecurity]
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern IntPtr CreateFileW(
+             [MarshalAs(UnmanagedType.LPWStr)] string filename,
+             [MarshalAs(UnmanagedType.U4)] FileAccess access,
+             [MarshalAs(UnmanagedType.U4)] FileShare share,
+             IntPtr securityAttributes,
+             [MarshalAs(UnmanagedType.U4)] FileMode creationDisposition,
+             [MarshalAs(UnmanagedType.U4)] FileAttributes flagsAndAttributes,
+             IntPtr templateFile);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [System.Runtime.ConstrainedExecution.ReliabilityContract(
+            System.Runtime.ConstrainedExecution.Consistency.WillNotCorruptState, 
+            System.Runtime.ConstrainedExecution.Cer.Success)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool CloseHandle(IntPtr hObject);
     }
 }

@@ -21,7 +21,13 @@ namespace DirEnumSrv
         {
             const int SrvPort = 44000;
             Stats stats = new Stats();
-            RunServer(SrvPort, stats);
+
+            CancellationTokenSource cts = new CancellationTokenSource();
+            RunServerAsync(SrvPort, stats, cts.Token);
+        }
+        static void RunServerAsync(int port, Stats stats, CancellationToken ct)
+        {
+            SrvAsync.Run(new IPAddress[] { IPAddress.Any, IPAddress.IPv6Any }, port, stats, ct);
         }
         static void RunServer(int port, Stats stats)
         {
